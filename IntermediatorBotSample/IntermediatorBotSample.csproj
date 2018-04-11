@@ -210,10 +210,13 @@
       <DependentUpon>ConversationText.resx</DependentUpon>
     </Compile>
     <Compile Include="Strings\StringAndCharConstants.cs" />
+    <Compile Include="Utils\RequestsStorage.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
-    <Content Include="AppSettingsAndCredentials.config" />
+    <Content Include="AppSettingsAndCredentials.config">
+      <SubType>Designer</SubType>
+    </Content>
     <None Include="Properties\PublishProfiles\IntermediatorBotSample - Web Deploy.pubxml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
