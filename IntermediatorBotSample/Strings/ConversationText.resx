@@ -121,25 +121,25 @@
     <value>Accept</value>
   </data>
   <data name="AcceptRejectConnectionHint" xml:space="preserve">
-    <value>Accept or reject the request: Type "{0}" to accept, "{1}" to reject or use the buttons if enabled</value>
+    <value>Acceptez ou refusez la requête: Tapez "{0}" pour accepter, "{1}" pour refuser, ou utilisez les boutons s'ils sont activés</value>
   </data>
   <data name="AddAggregationChannelCommandHint" xml:space="preserve">
-    <value>To set up an aggregation channel, type "{0}"</value>
+    <value>Pour ajouter un canal d'aggrégation, tapez "{0}"</value>
   </data>
   <data name="AggregationChannelAlreadySet" xml:space="preserve">
-    <value>This channel/conversation is already receiving requests</value>
+    <value>Ce canal est désormais prèt à recevoir des demandes de connexion.</value>
   </data>
   <data name="AggregationChannelRemoved" xml:space="preserve">
-    <value>This channel/conversation will no longer receive requests</value>
+    <value>Ce canal ne recevra plus de demandes de connexion.</value>
   </data>
   <data name="AggregationChannelSet" xml:space="preserve">
-    <value>This channel/conversation is now where the requests are aggregated</value>
+    <value>Ce canal recevra désormais des demandes de connexion.</value>
   </data>
   <data name="AlreadyConnectedWithUser" xml:space="preserve">
-    <value>You are already connected with user "{0}"</value>
+    <value>Vous êtes déjà connecté à l'utilisateur : "{0}"</value>
   </data>
   <data name="CommandMenuDescription" xml:space="preserve">
-    <value>Administrative options for controlling the end user bot conversations</value>
+    <value>Panneau d'administration pour controler les conversations live</value>
   </data>
   <data name="CommandMenuInstructions" xml:space="preserve">
     <value>Select the command using the buttons below or type the command keyword ("{0}")/bot handle ("@{1}") followed by the command and its parameters (if any), for example: "{2}".</value>
@@ -157,19 +157,19 @@
     <value>Sorry, you are not allowed to accept or reject requests</value>
   </data>
   <data name="ConnectionRequestTitle" xml:space="preserve">
-    <value>Assistance request</value>
+    <value>Demande d'assistance</value>
   </data>
   <data name="ConnectRequestCommandHint" xml:space="preserve">
     <value>To initiate a conversation with an agent, type "{0}"</value>
   </data>
   <data name="DeletingAllData" xml:space="preserve">
-    <value>Deleting all data...</value>
+    <value>Suppression des données...</value>
   </data>
   <data name="DeletingAllDataWithCommandIssuer" xml:space="preserve">
-    <value>Deleting all data as requested by "0"...</value>
+    <value>Suppression de toutes les données demandée par "0"...</value>
   </data>
   <data name="EchoMessage" xml:space="preserve">
-    <value>You said: {0}</value>
+    <value>Vous avez dit: {0}</value>
   </data>
   <data name="ErrorOccured" xml:space="preserve">
     <value>An error occured</value>
@@ -184,13 +184,13 @@
     <value>Failed to find a pending request for user "0": {1}</value>
   </data>
   <data name="FailedToForwardMessage" xml:space="preserve">
-    <value>Failed to forward the message</value>
+    <value>Echec lors de l'envoi du message</value>
   </data>
   <data name="FailedToRemoveAggregationChannel" xml:space="preserve">
     <value>Failed to remove aggregation channel</value>
   </data>
   <data name="NoAgentsAvailable" xml:space="preserve">
-    <value>Sorry, there are no agents available right now</value>
+    <value>Désolé, nos agents ne sont pas disponible pour le moment</value>
   </data>
   <data name="NoAggregationChannel" xml:space="preserve">
     <value>No aggregation channel set up</value>
@@ -199,55 +199,55 @@
     <value>No pending requests</value>
   </data>
   <data name="NotifyClientConnected" xml:space="preserve">
-    <value>Your request was accepted and you are now chatting with {0}</value>
+    <value>Votre requête a été acceptée, vous êtes en relation avec {0}</value>
   </data>
   <data name="NotifyClientDisconnected" xml:space="preserve">
-    <value>Your conversation with {0} has ended</value>
+    <value>Votre conversation avec {0} est terminée</value>
   </data>
   <data name="NotifyClientDuplicateRequest" xml:space="preserve">
-    <value>Your request has already been received, please wait for an agent to respond</value>
+    <value>Votre requête a été reçue, veuillez patienter pendant qu'un agent traite votre demande.</value>
   </data>
   <data name="NotifyClientRequestRejected" xml:space="preserve">
     <value>Unfortunately your request could not be processed</value>
   </data>
   <data name="NotifyClientWaitForRequestHandling" xml:space="preserve">
-    <value>Please wait for your request to be accepted</value>
+    <value>Un agent va traiter votre requête</value>
   </data>
   <data name="NotifyOwnerConnected" xml:space="preserve">
-    <value>You are now connected to user "{0}"</value>
+    <value>Vous êtes désormais connecté à l'utilisateur : "{0}"</value>
   </data>
   <data name="NotifyOwnerDisconnected" xml:space="preserve">
-    <value>You are now disconnected from the conversation with user "{0}"</value>
+    <value>Vous avez été deconnecté de l'utilisateur : "{0}"</value>
   </data>
   <data name="NotifyOwnerRequestRejected" xml:space="preserve">
-    <value>Request from user "{0}" rejected</value>
+    <value>La requête de l'utilisateur "{0}" a été rejetée</value>
   </data>
   <data name="OptionsCommandHint" xml:space="preserve">
-    <value>To see the available commands, type "{0}"</value>
+    <value>Pour voir les commandes disponibles, tapez "{0}"</value>
   </data>
   <data name="PartyRemoved" xml:space="preserve">
     <value>Party "{0}" removed</value>
   </data>
   <data name="RejectButtonTitle" xml:space="preserve">
-    <value>Reject</value>
+    <value>Rejeter</value>
   </data>
   <data name="RequestorDetailsTitle" xml:space="preserve">
-    <value>Requested by user "{0}" on channel "{1}"</value>
+    <value>Requête de l'utilisateur "{0}" sur le canal "{1}"</value>
   </data>
   <data name="UserDataDeleted" xml:space="preserve">
-    <value>Data of user "{0}" deleted</value>
+    <value>Les données de l'utilisateur "{0}" ont été supprimées</value>
   </data>
   <data name="UserNameMissing" xml:space="preserve">
-    <value>User name missing</value>
+    <value>Nom d'utilisateur manquant</value>
   </data>
   <data name="AcceptConnectionRequestsCardInstructions" xml:space="preserve">
     <value>Choose the user whose request to accept</value>
   </data>
   <data name="AcceptConnectionRequestsCardTitle" xml:space="preserve">
-    <value>Accept request</value>
+    <value>Accepter la requête</value>
   </data>
   <data name="ApplyToAll" xml:space="preserve">
-    <value>Apply to all</value>
+    <value>Appliquer à tous</value>
   </data>
   <data name="Bots" xml:space="preserve">
     <value>Bots</value>
@@ -259,7 +259,7 @@
     <value>Failed to reject pending requests</value>
   </data>
   <data name="InvalidCommand" xml:space="preserve">
-    <value>Invalid command</value>
+    <value>Commande invalide</value>
   </data>
   <data name="InvalidOrMissingCommandParameter" xml:space="preserve">
     <value>Command parameter invalid or missing</value>
@@ -280,10 +280,10 @@
     <value>{0} pending request(s) found</value>
   </data>
   <data name="RejectAll" xml:space="preserve">
-    <value>Reject all</value>
+    <value>Rejeter tout</value>
   </data>
   <data name="RejectConnectionRequestCardTitle" xml:space="preserve">
-    <value>Reject request</value>
+    <value>Rejeter</value>
   </data>
   <data name="RejectConnectionRequestsCardInstructions" xml:space="preserve">
     <value>Choose the user whose request to reject</value>

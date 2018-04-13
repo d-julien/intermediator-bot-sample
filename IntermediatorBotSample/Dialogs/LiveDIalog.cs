@@ -1,9 +1,11 @@
 ﻿using IntermediatorBot.Strings;
 using IntermediatorBotSample.CommandHandling;
+using IntermediatorBotSample.MessageRouting;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Connector;
 using System;
 using System.Threading.Tasks;
+using Underscore.Bot.MessageRouting;
 
 namespace IntermediatorBotSample.Dialogs
 {
@@ -11,7 +13,7 @@ namespace IntermediatorBotSample.Dialogs
     /// Simple dialog that will only ever provide simple instructions.
     /// </summary>
     [Serializable]
-    public class RootDialog : IDialog<object>
+    public class LiveDialog : IDialog<object>
     {
         public Task StartAsync(IDialogContext dialogContext)
         {
@@ -24,23 +26,22 @@ namespace IntermediatorBotSample.Dialogs
         /// </summary>
         /// <param name="dialogContext">The dialog context.</param>
         /// <param name="result">The result containing the message sent by the user.</param>
-        private async Task OnMessageReceivedAsync(IDialogContext dialogContext, IAwaitable<IMessageActivity> result)
+        private async Task OnMessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> result)
         {
             IMessageActivity messageActivity = await result;
             string messageText = messageActivity.Text;
+            var activity = (Activity)context.Activity;
 
             if (!string.IsNullOrEmpty(messageText))
             {
-                messageActivity = dialogContext.MakeMessage();
-
-                messageActivity.Text =
-                    $"* {string.Format(ConversationText.OptionsCommandHint, $"{Commands.CommandKeyword} {Commands.CommandListOptions}")}"
-                    + $"\n\r* {string.Format(ConversationText.ConnectRequestCommandHint, Commands.CommandRequestConnection)}";
-
-                await dialogContext.PostAsync(messageActivity);
+                MessageRouterResultHandler messageRouterResultHandler = WebApiConfig.MessageRouterResultHandler;
+                await context.PostAsync($"Veuillez patienter, vous allez être mis en contact avec un humain.");
+                messageActivity.Text = "human";
+                var messageRouterResult = WebApiConfig.MessageRouterManager.RequestConnection((messageActivity as Activity));
+                messageRouterResult.Activity = messageActivity as Activity;
+                await messageRouterResultHandler.HandleResultAsync(messageRouterResult);
+                context.Done(this);
             }
-
-            dialogContext.Wait(OnMessageReceivedAsync);
         }
     }
 }

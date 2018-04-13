@@ -1,12 +1,16 @@
 ﻿using IntermediatorBot.Strings;
+using IntermediatorBot.Utils;
 using IntermediatorBotSample.CommandHandling;
+using IntermediatorBotSample.Settings;
 using Microsoft.Bot.Connector;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Threading.Tasks;
 using Underscore.Bot.MessageRouting;
 using Underscore.Bot.MessageRouting.DataStore;
 using Underscore.Bot.Models;
+using Underscore.Bot.Models.Azure;
 using Underscore.Bot.Utils;
 
 namespace IntermediatorBotSample.MessageRouting
@@ -175,34 +179,60 @@ namespace IntermediatorBotSample.MessageRouting
                 bool conversationClientPartyMissing =
                     (conversationClientParty == null || conversationClientParty.ChannelAccount == null);
 
-                foreach (Party aggregationParty in _messageRouterManager.RoutingDataManager.GetAggregationParties())
+                if (!conversationClientPartyMissing && conversationOwnerParty == null)
                 {
-                    Party botParty = routingDataManager.FindBotPartyByChannelAndConversation(
-                        aggregationParty.ChannelId, aggregationParty.ConversationAccount);
+                    messageToConversationClient = ConversationText.NotifyClientWaitForRequestHandling;
+                }
+                else
+                {
+                    var Settings = new BotSettings();
+                    Manager manager = new Manager(Settings[BotSettings.KeyRoutingDataStorageConnectionString]);
+                    ConnectionEntity waitingConnectionEntity = manager.retrieveWaitingConnectionEntity(messageRouterResult.ConversationClientParty.ConversationAccount.Id, messageRouterResult.ConversationOwnerParty.ConversationAccount.Id);
 
-                    if (botParty != null)
+                    if (waitingConnectionEntity != null)
                     {
-                        if (conversationClientPartyMissing)
-                        {
-                            await _messageRouterManager.SendMessageToPartyByBotAsync(
-                                aggregationParty, ConversationText.RequestorDetailsMissing);
-                        }
-                        else
-                        {
-                            IMessageActivity messageActivity = Activity.CreateMessageActivity();
-                            messageActivity.Conversation = aggregationParty.ConversationAccount;
-                            messageActivity.Recipient = aggregationParty.ChannelAccount;
-                            messageActivity.Attachments = new List<Attachment>
+                        IMessageActivity messageActivity = Activity.CreateMessageActivity();
+                        messageActivity.Conversation = messageRouterResult.ConversationOwnerParty.ConversationAccount;
+                        messageActivity.Recipient = messageRouterResult.ConversationOwnerParty.ChannelAccount;
+                        messageActivity.Attachments = new List<Attachment>
                             {
                                 CommandCardFactory.CreateRequestCard(
-                                    conversationClientParty, botParty.ChannelAccount?.Name).ToAttachment()
+                                    conversationClientParty, messageRouterResult.ConversationOwnerParty.ChannelAccount?.Name).ToAttachment()
                             };
 
-                            await _messageRouterManager.SendMessageToPartyByBotAsync(
-                                aggregationParty, messageActivity);
-                        }
+                        await _messageRouterManager.SendMessageToPartyByBotAsync(
+                            messageRouterResult.ConversationOwnerParty, messageActivity);
                     }
                 }
+
+                //foreach (Party aggregationParty in _messageRouterManager.RoutingDataManager.GetAggregationParties())
+                //{
+                //    Party botParty = routingDataManager.FindBotPartyByChannelAndConversation(
+                //        aggregationParty.ChannelId, aggregationParty.ConversationAccount);
+
+                //    if (botParty != null)
+                //    {
+                //        if (conversationClientPartyMissing)
+                //        {
+                //            await _messageRouterManager.SendMessageToPartyByBotAsync(
+                //                aggregationParty, ConversationText.RequestorDetailsMissing);
+                //        }
+                //        else
+                //        {
+                //            IMessageActivity messageActivity = Activity.CreateMessageActivity();
+                //            messageActivity.Conversation = aggregationParty.ConversationAccount;
+                //            messageActivity.Recipient = aggregationParty.ChannelAccount;
+                //            messageActivity.Attachments = new List<Attachment>
+                //            {
+                //                CommandCardFactory.CreateRequestCard(
+                //                    conversationClientParty, botParty.ChannelAccount?.Name).ToAttachment()
+                //            };
+
+                //            await _messageRouterManager.SendMessageToPartyByBotAsync(
+                //                aggregationParty, messageActivity);
+                //        }
+                //    }
+                //}
 
                 if (!conversationClientPartyMissing)
                 {
@@ -211,7 +241,24 @@ namespace IntermediatorBotSample.MessageRouting
             }
             else if (messageRouterResult.Type == MessageRouterResultType.ConnectionAlreadyRequested)
             {
-                messageToConversationClient = ConversationText.NotifyClientDuplicateRequest;
+                if (conversationOwnerParty != null && conversationClientParty != null)
+                {
+                    IMessageActivity messageActivity = Activity.CreateMessageActivity();
+                    messageActivity.Conversation = messageRouterResult.ConversationOwnerParty.ConversationAccount;
+                    messageActivity.Recipient = messageRouterResult.ConversationOwnerParty.ChannelAccount;
+                    messageActivity.Attachments = new List<Attachment>
+                            {
+                                CommandCardFactory.CreateRequestCard(
+                                    conversationClientParty, messageRouterResult.ConversationOwnerParty.ChannelAccount?.Name).ToAttachment()
+                            };
+
+                    await _messageRouterManager.SendMessageToPartyByBotAsync(
+                        messageRouterResult.ConversationOwnerParty, messageActivity);
+                }
+                else if (conversationOwnerParty == null && conversationClientParty != null)
+                {
+                    messageToConversationClient = ConversationText.NotifyClientDuplicateRequest;
+                }
             }
             else if (messageRouterResult.Type == MessageRouterResultType.ConnectionRejected)
             {
