@@ -185,7 +185,6 @@
     <Compile Include="CommandHandling\CommandCardFactory.cs" />
     <Compile Include="CommandHandling\CommandMessageHandler.cs" />
     <Compile Include="Controllers\AgentController.cs" />
-    <Compile Include="Controllers\TempMessagesController.cs" />
     <Compile Include="Dialogs\LiveDialog.cs" />
     <Compile Include="Extensions\ActivityExtensions.cs" />
     <Compile Include="Global.asax.cs">
