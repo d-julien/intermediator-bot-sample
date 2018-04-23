@@ -1,5 +1,8 @@
-﻿using IntermediatorBot.Strings;
+﻿using IntermediatorBot.ManagerMethods;
+using IntermediatorBot.Strings;
+using IntermediatorBot.Utils;
 using IntermediatorBotSample.MessageRouting;
+using IntermediatorBotSample.Settings;
 using Microsoft.Bot.Connector;
 using System;
 using System.Collections.Generic;
@@ -159,9 +162,12 @@ namespace IntermediatorBotSample.CommandHandling
 
                     case string baseCommand when (baseCommand.Equals(Commands.CommandDisconnect)):
                         // End the 1:1 conversation
-                        IList<MessageRouterResult> messageRouterResults = _messageRouterManager.Disconnect(senderParty);
+                        var Settings = new Settings.BotSettings();
 
-                        foreach (MessageRouterResult messageRouterResult in messageRouterResults)
+                        Manager manager = new Manager(Settings[BotSettings.KeyRoutingDataStorageConnectionString]);
+                        MessageRouterResult messageRouterResult = manager.RemoveConnection(senderParty);
+
+                        if (messageRouterResult != null)
                         {
                             await _messageRouterResultHandler.HandleResultAsync(messageRouterResult);
                         }

@@ -1,11 +1,14 @@
-﻿using IntermediatorBot.Strings;
+﻿using IntermediatorBot.ManagerMethods;
+using IntermediatorBot.Strings;
 using IntermediatorBot.Utils;
 using IntermediatorBotSample.Settings;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Configuration;
+using System.Diagnostics;
 using Underscore.Bot.MessageRouting;
 using Underscore.Bot.MessageRouting.DataStore;
 using Underscore.Bot.Models;
@@ -71,6 +74,7 @@ namespace IntermediatorBotSample.CommandHandling
         /// </returns>
         public virtual MessageRouterResult HandleBackChannelMessage(Activity activity)
         {
+            MessageRouterResult messageRouterResultNoAction = new MessageRouterResult { Type = MessageRouterResultType.NoActionTaken };
             MessageRouterResult messageRouterResult = new MessageRouterResult();
             var Settings = new BotSettings();
             Manager manager = new Manager(Settings[BotSettings.KeyRoutingDataStorageConnectionString]);
@@ -94,6 +98,7 @@ namespace IntermediatorBotSample.CommandHandling
                     try
                     {
                         conversationClientParty = ParsePartyFromChannelData(activity.ChannelData);
+                        Debug.WriteLine($"Client : {JsonConvert.SerializeObject(conversationClientParty)}");
                     }
                     catch (Exception e)
                     {
@@ -105,11 +110,60 @@ namespace IntermediatorBotSample.CommandHandling
                     if (conversationClientParty != null)
                     {
                         Party conversationOwnerParty = MessagingUtils.CreateSenderParty(activity);
+                        Debug.WriteLine($"Owner : {JsonConvert.SerializeObject(conversationOwnerParty)}");
 
-                        //messageRouterResult = _routingDataManager.ConnectAndClearPendingRequest(
-                        //    conversationOwnerParty, conversationClientParty);
-                        messageRouterResult = manager.WaitingConnectAndClearPendingRequest(conversationOwnerParty, conversationClientParty);
-                        messageRouterResult.Activity = activity;
+                        MessageRouterManager messageRouterManager = WebApiConfig.MessageRouterManager;
+                        IRoutingDataManager routingDataManager = messageRouterManager.RoutingDataManager;
+
+                        bool isConnected = false;
+
+                        Dictionary<Party, Party> connectedParties = routingDataManager.GetConnectedParties();
+
+                        foreach (var connectedPartie in connectedParties)
+                        {
+                            if (connectedPartie.Value.ConversationAccount.Id == conversationClientParty.ConversationAccount.Id)
+                            {
+                                isConnected = true;
+                                break;
+                            }
+                        }
+
+                        if (isConnected)
+                        {
+                            bool deleteConnexion = manager.ExecuteRemoveConnexionByConversationClientId(conversationClientParty.ConversationAccount.Id);
+                            messageRouterResult = deleteConnexion ? manager.Connect(conversationOwnerParty, conversationClientParty) : messageRouterResultNoAction;
+                        }
+                        else
+                        {
+                            Dictionary<Party, Party> waitingConnectedParties = manager.GetWaitingConnectedParties();
+                            bool isWaitingConnected = false;
+
+                            foreach (var waitingConnectedPartie in waitingConnectedParties)
+                            {
+                                if (waitingConnectedPartie.Value.ConversationAccount.Id == conversationClientParty.ConversationAccount.Id)
+                                {
+                                    isWaitingConnected = true;
+                                    break;
+                                }
+                            }
+
+                            if (isWaitingConnected)
+                            {
+                                bool deleteWaitingConnection = manager.ExecuteRemoveWaitingConnexionByConversationClientId(conversationClientParty.ConversationAccount.Id);
+                                messageRouterResult = deleteWaitingConnection ? manager.WaitingConnectAndClearPendingRequest(conversationOwnerParty, conversationClientParty) : messageRouterResultNoAction;
+
+                                messageRouterResult.Activity = activity;
+                            }
+                            else
+                            {
+                                messageRouterResult = manager.WaitingConnectAndClearPendingRequest(conversationOwnerParty, conversationClientParty);
+
+                                //messageRouterResult = _routingDataManager.ConnectAndClearPendingRequest(
+                                //    conversationOwnerParty, conversationClientParty);
+
+                                messageRouterResult.Activity = activity;
+                            }
+                        }
                     }
                 }
             }

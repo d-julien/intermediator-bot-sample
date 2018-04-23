@@ -205,8 +205,10 @@
       <DependentUpon>ConversationText.resx</DependentUpon>
     </Compile>
     <Compile Include="Strings\StringAndCharConstants.cs" />
+    <Compile Include="Utils\LogsManager.cs" />
     <Compile Include="Utils\Manager.cs" />
     <Compile Include="Utils\RequestsStorage.cs" />
+    <Compile Include="Utils\UserLogs.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />

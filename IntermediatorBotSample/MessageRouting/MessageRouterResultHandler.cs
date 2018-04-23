@@ -1,4 +1,5 @@
-﻿using IntermediatorBot.Strings;
+﻿using IntermediatorBot.ManagerMethods;
+using IntermediatorBot.Strings;
 using IntermediatorBot.Utils;
 using IntermediatorBotSample.CommandHandling;
 using IntermediatorBotSample.Settings;

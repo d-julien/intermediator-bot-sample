@@ -1,7 +1,10 @@
-﻿using Microsoft.WindowsAzure.Storage.Table;
+﻿using Microsoft.Azure;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Web;
 using Underscore.Bot.MessageRouting;
@@ -10,7 +13,7 @@ using Underscore.Bot.Models;
 using Underscore.Bot.Models.Azure;
 using Underscore.Bot.Utils;
 
-namespace IntermediatorBot.Utils
+namespace IntermediatorBot.ManagerMethods
 {
     public class Manager : AzureTableStorageRoutingDataManager
     {
@@ -22,6 +25,7 @@ namespace IntermediatorBot.Utils
             _waitingConnectionsTable = AzureStorageHelper.GetTable(connectionString, TableWaitingConnections);
         }
 
+        // Connexion
         public MessageRouterResult RemoveConnection(Party conversationOwnerParty)
         {
             MessageRouterResult messageRouterResult = null;
@@ -50,27 +54,142 @@ namespace IntermediatorBot.Utils
             return messageRouterResult;
         }
 
+        public MessageRouterResult Connect(Party conversationOwnerParty, Party conversationClientParty)
+        {
+            MessageRouterResult result = new MessageRouterResult()
+            {
+                ConversationOwnerParty = conversationOwnerParty,
+                ConversationClientParty = conversationClientParty
+            };
+
+            if (conversationOwnerParty != null && conversationClientParty != null)
+            {
+                DateTime connectionStartedTime = GetCurrentGlobalTime();
+                conversationClientParty.ResetConnectionRequestTime();
+                conversationClientParty.ConnectionEstablishedTime = connectionStartedTime;
+
+                bool wasConnectionAdded =
+                    ExecuteConnection(conversationOwnerParty, conversationClientParty);
+
+                if (wasConnectionAdded)
+                {
+                    result.Type = MessageRouterResultType.Connected;
+                }
+                else
+                {
+                    result.Type = MessageRouterResultType.Error;
+                    result.ErrorMessage =
+                        $"Failed to add connection between {conversationOwnerParty} and {conversationClientParty}";
+                }
+            }
+            else
+            {
+                result.Type = MessageRouterResultType.Error;
+                result.ErrorMessage = "Either the owner or the client is missing";
+            }
+
+            return result;
+        }
+
+        protected bool ExecuteConnection(Party conversationOwnerParty, Party conversationClientParty)
+        {
+            return AzureStorageHelper.Insert<ConnectionEntity>(_connectionsTable, new ConnectionEntity()
+            {
+                PartitionKey = conversationClientParty.ConversationAccount.Id,
+                RowKey = conversationOwnerParty.ConversationAccount.Id,
+                Client = JsonConvert.SerializeObject(new PartyEntity(conversationClientParty, PartyEntityType.Client)),
+                Owner = JsonConvert.SerializeObject(new PartyEntity(conversationOwnerParty, PartyEntityType.Owner)),
+            });
+        }
+
+        public bool ExecuteRemoveConnexion(string conversationClientId, string conversationOwnerId)
+        {
+            return DeleteEntry<ConnectionEntity>(_connectionsTable, conversationClientId, conversationOwnerId);
+        }
+
+        public bool ExecuteRemoveConnexionByConversationClientId(string conversationClientId)
+        {
+            bool delete = false;
+
+            ConnectionEntity connection = null;
+            TableQuery<ConnectionEntity> query = new TableQuery<ConnectionEntity>().Where(
+                TableQuery.CombineFilters(
+                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, conversationClientId),
+                TableOperators.Or,
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, conversationClientId)
+                ));
+
+            var result = _connectionsTable.ExecuteQuery(query);
+
+            if (result.Count() != 0)
+            {
+                connection = _connectionsTable.ExecuteQuery(query).First();
+                TableOperation deleteOperation = TableOperation.Delete(connection);
+                _connectionsTable.Execute(deleteOperation);
+                delete = true;
+            }
+
+            return delete;
+        }
+
+        // Waiting connexion
         public bool RemoveWaitingConnection(Party conversationOwnerParty, Party conversationClientParty)
         {
             return DeleteEntry<ConnectionEntity>(_waitingConnectionsTable, conversationClientParty.ConversationAccount.Id, conversationOwnerParty.ConversationAccount.Id);
         }
 
-        public static bool DeleteEntry<T>(CloudTable cloudTable, string partitionKey, string rowKey) where T : TableEntity
+        public bool ExecuteRemoveWaitingConnexionByConversationClientId(string conversationClientId)
         {
-            TableOperation retrieveOperation = TableOperation.Retrieve<T>(partitionKey, rowKey);
-            TableResult retrieveResult = cloudTable.Execute(retrieveOperation);
+            bool delete = false;
 
-            if (retrieveResult.Result is T entityToDelete)
+            ConnectionEntity connection = null;
+            TableQuery<ConnectionEntity> query = new TableQuery<ConnectionEntity>().Where(
+                TableQuery.CombineFilters(
+                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, conversationClientId),
+                TableOperators.Or,
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, conversationClientId)
+                ));
+
+            var result = _waitingConnectionsTable.ExecuteQuery(query);
+
+            if (result.Count() != 0)
             {
-                TableOperation deleteOperation = TableOperation.Delete(entityToDelete);
-                cloudTable.Execute(deleteOperation);
-                return true;
+                connection = _waitingConnectionsTable.ExecuteQuery(query).First();
+                TableOperation deleteOperation = TableOperation.Delete(connection);
+                _waitingConnectionsTable.Execute(deleteOperation);
+                delete = true;
             }
 
-            return false;
+            return delete;
         }
 
-        protected bool ExecuteAddWaitingConnection(Party conversationOwnerParty, Party conversationClientParty)
+        public Dictionary<Party, Party> GetWaitingConnectedParties()
+        {
+            Dictionary<Party, Party> waitingConnectedParties = new Dictionary<Party, Party>();
+            List<ConnectionEntity> waitingConnectionEntities = null;
+
+            try
+            {
+                waitingConnectionEntities =
+                    _waitingConnectionsTable.ExecuteQuery(new TableQuery<ConnectionEntity>()).ToList();
+            }
+            catch (StorageException e)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to retrieve the connected parties: {e.Message}");
+                return waitingConnectedParties; // Return empty dictionary
+            }
+
+            foreach (var connectionEntity in waitingConnectionEntities)
+            {
+                waitingConnectedParties.Add(
+                    JsonConvert.DeserializeObject<PartyEntity>(connectionEntity.Owner).ToParty(),
+                    JsonConvert.DeserializeObject<PartyEntity>(connectionEntity.Client).ToParty());
+            }
+
+            return waitingConnectedParties;
+        }
+
+        public bool ExecuteAddWaitingConnection(Party conversationOwnerParty, Party conversationClientParty)
         {
             return AzureStorageHelper.Insert<ConnectionEntity>(_waitingConnectionsTable, new ConnectionEntity()
             {
@@ -151,52 +270,21 @@ namespace IntermediatorBot.Utils
             return result;
         }
 
-        public MessageRouterResult Connect(Party conversationOwnerParty, Party conversationClientParty)
+
+
+        public static bool DeleteEntry<T>(CloudTable cloudTable, string partitionKey, string rowKey) where T : TableEntity
         {
-            MessageRouterResult result = new MessageRouterResult()
-            {
-                ConversationOwnerParty = conversationOwnerParty,
-                ConversationClientParty = conversationClientParty
-            };
+            TableOperation retrieveOperation = TableOperation.Retrieve<T>(partitionKey, rowKey);
+            TableResult retrieveResult = cloudTable.Execute(retrieveOperation);
 
-            if (conversationOwnerParty != null && conversationClientParty != null)
+            if (retrieveResult.Result is T entityToDelete)
             {
-                DateTime connectionStartedTime = GetCurrentGlobalTime();
-                conversationClientParty.ResetConnectionRequestTime();
-                conversationClientParty.ConnectionEstablishedTime = connectionStartedTime;
-
-                bool wasConnectionAdded =
-                    ExecuteConnection(conversationOwnerParty, conversationClientParty);
-
-                if (wasConnectionAdded)
-                {
-                    result.Type = MessageRouterResultType.Connected;
-                }
-                else
-                {
-                    result.Type = MessageRouterResultType.Error;
-                    result.ErrorMessage =
-                        $"Failed to add connection between {conversationOwnerParty} and {conversationClientParty}";
-                }
-            }
-            else
-            {
-                result.Type = MessageRouterResultType.Error;
-                result.ErrorMessage = "Either the owner or the client is missing";
+                TableOperation deleteOperation = TableOperation.Delete(entityToDelete);
+                cloudTable.Execute(deleteOperation);
+                return true;
             }
 
-            return result;
-        }
-
-        protected bool ExecuteConnection(Party conversationOwnerParty, Party conversationClientParty)
-        {
-            return AzureStorageHelper.Insert<ConnectionEntity>(_connectionsTable, new ConnectionEntity()
-            {
-                PartitionKey = conversationClientParty.ConversationAccount.Id,
-                RowKey = conversationOwnerParty.ConversationAccount.Id,
-                Client = JsonConvert.SerializeObject(new PartyEntity(conversationClientParty, PartyEntityType.Client)),
-                Owner = JsonConvert.SerializeObject(new PartyEntity(conversationOwnerParty, PartyEntityType.Owner)),
-            });
+            return false;
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using IntermediatorBot.Utils;
+﻿using IntermediatorBot.ManagerMethods;
+using IntermediatorBot.Utils;
 using IntermediatorBotSample.MessageRouting;
 using IntermediatorBotSample.Settings;
 using Microsoft.WindowsAzure.Storage;
@@ -6,6 +7,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Web.Http;
 using System.Web.Http.Cors;
@@ -21,6 +23,7 @@ namespace IntermediatorBotSample.Controllers
     public class AgentController : ApiController
     {
         private const string ResponseNone = "None";
+        List<Party> clientsParties = new List<Party>();
 
         /// <summary>
         /// Handles requests sent by the Agent UI.
@@ -47,7 +50,6 @@ namespace IntermediatorBotSample.Controllers
                     var conversationId = conversationClientParty.ConversationAccount.Id;
                     messageRouterManager.RoutingDataManager.RemovePendingRequest(conversationClientParty);
                     response = conversationClientParty.ToJsonString();
-                    AddConversationToTableStorage(response, conversationId);
                 }
                 catch (InvalidOperationException e)
                 {
@@ -59,31 +61,40 @@ namespace IntermediatorBotSample.Controllers
         }
 
         [EnableCors("*", "*", "*")]
-        [HttpGet]
-        public List<string> GetOpenConversations()
+        [HttpPost]
+        public string RefreshAgent(int id)
         {
-            var Settings = new BotSettings();
-            var pendingrequestList = new List<string>();
+            string response = ResponseNone;
+            MessageRouterManager messageRouterManager = WebApiConfig.MessageRouterManager;
+            IRoutingDataManager routingDataManager = messageRouterManager.RoutingDataManager;
+            var Settings = new Settings.BotSettings();
+            Manager manager = new Manager(Settings[BotSettings.KeyRoutingDataStorageConnectionString]);
 
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(
-                Settings[BotSettings.KeyRoutingDataStorageConnectionString]);
+                try
+                {
+                    Dictionary<Party, Party> connectedParties = routingDataManager.GetConnectedParties();
+                    Dictionary<Party, Party> waitingConnectedParties = manager.GetWaitingConnectedParties();
 
-            // Create the table client.
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
+                    foreach (var connectedPartie in connectedParties)
+                    {
+                        clientsParties.Add(connectedPartie.Value);
+                    }
 
-            // Create the CloudTable object that represents the "people" table.
-            CloudTable table = tableClient.GetTableReference("pendingRequest");
+                    foreach (var waitingConnectedPartie in waitingConnectedParties)
+                    {
+                        clientsParties.Add(waitingConnectedPartie.Value);
+                    }
 
-            var TodayPartitionKey = DateTime.Now.Date.ToShortDateString().Replace('/', '-');
-            // Construct the query operation for all customer entities where PartitionKey="Smith".
-            TableQuery<RequestsStorage> query = new TableQuery<RequestsStorage>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, TodayPartitionKey));
+                    response = JsonConvert.SerializeObject(clientsParties);
+                }
+                catch (InvalidOperationException e)
+                {
+                    Debug.WriteLine($"{e.Message}");
+                }
 
-            // Print the fields for each customer.
-            foreach (RequestsStorage entity in table.ExecuteQuery(query))
-            {
-                pendingrequestList.Add(entity.RowKey);
-            }
-            return pendingrequestList;
+            Debug.WriteLine("refresh");
+
+            return response;
         }
 
         
@@ -92,72 +103,9 @@ namespace IntermediatorBotSample.Controllers
         [HttpPost]
         public string DisconnectConversations(string conversationId)
         {
-            var Settings = new BotSettings();
-            MessageRouterManager messageRouterManager = WebApiConfig.MessageRouterManager;
-            MessageRouterResultHandler messageRouterResultHandler = new MessageRouterResultHandler(messageRouterManager);
-
-
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(
-                Settings[BotSettings.KeyRoutingDataStorageConnectionString]);
-
-            // Create the table client.
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
-
-            // Create the CloudTable object that represents the "people" table.
-            CloudTable table = tableClient.GetTableReference("pendingRequest");
-
-            var TodayPartitionKey = DateTime.Now.Date.ToShortDateString().Replace('/', '-');
-            // Create a retrieve operation that takes a customer entity.
-            TableOperation retrieveOperation = TableOperation.Retrieve<RequestsStorage>(TodayPartitionKey, conversationId);
-
-            // Execute the retrieve operation.
-            TableResult retrievedResult = table.Execute(retrieveOperation);
-
-            // Print the phone number of the result.
-            if (retrievedResult.Result != null)
-            {
-                var toto = ((RequestsStorage)retrievedResult.Result).Data;
-
-                Party senderParty = JsonConvert.DeserializeObject<Party>(toto);
-
-                IList<MessageRouterResult> messageRouterResults = messageRouterManager.Disconnect(senderParty);
-
-                foreach (MessageRouterResult messageRouterResult in messageRouterResults)
-                {
-                    messageRouterResultHandler.HandleResultAsync(messageRouterResult);
-                }
-            }
-            else
-            {
-                Console.WriteLine("Nous n'avons pas trouvé l'enregistrement à deconnecter");
-            }
+           
 
             return "toto";
-        }
-
-        private void AddConversationToTableStorage(string response, string id)
-        {
-            var Settings = new BotSettings();
-
-
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(
-                Settings[BotSettings.KeyRoutingDataStorageConnectionString]);
-
-            // Create the table client.
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
-
-            // Create the CloudTable object that represents the "people" table.
-            CloudTable table = tableClient.GetTableReference("pendingRequest");
-
-            // Create a new customer entity.
-            RequestsStorage storeLine = new RequestsStorage(response, id);
-            storeLine.Data = response;
-
-            // Create the TableOperation object that inserts the customer entity.
-            TableOperation insertOperation = TableOperation.Insert(storeLine);
-
-            // Execute the insert operation.
-            table.Execute(insertOperation);
         }
     }
 }
